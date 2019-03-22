@@ -1,0 +1,55 @@
+<#
+.NOTES
+	===========================================================================
+	 Created on:   	04/03/2019
+     	 Updated on:    04/03/2019
+	 Created by:   	Leo Pullen
+	 Organization: 	CNC Ltd
+	 Filename:      RemoveMimecast
+	===========================================================================
+	.DESCRIPTION
+     This will remove the files left over when trying to install Mimecast.
+#>
+
+If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
+{   
+#"No Administrative rights, it will display a popup window asking user for Admin rights"
+
+$arguments = "& '" + $myinvocation.mycommand.definition + "'"
+Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments
+
+break
+}  
+#"No Administrative rights, it will display a popup window asking user for Admin rights"
+
+# Uninstall Mimecast
+Uninstall-Package -Name "Mimecast for Outlook 32-bit" -Verbose -ErrorAction SilentlyContinue
+Uninstall-Package -Name "Mimecast for Outlook 64-bit" -Verbose -ErrorAction SilentlyContinue
+
+# Old Manual Work
+Remove-Item C:\ProgramData\Mimecast\Logs\* -Verbose
+Remove-Item C:\Users\$env:USERNAME\AppData\Roaming\Mimecast\msw.s3db -Verbose
+ 
+Write-Host 'We now need to remove Registry files, Please backup the registry before running this
+Just in case It will backup each file to C:\Temp\Reg\'
+Pause
+Write-Host 'OK Lets Start' 
+
+
+
+# PowerShell PSDRIVE
+New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT
+
+# Export Time
+Write-Host 'Backup Reg files to C:\Temp\Reg\' -Verbose
+mkdir C:\Temp\Reg\ -Force -Verbose
+Reg export "HKCR\CLSID\{FB44DE85-4BF9-4F79-BBAD-F6AEE009F844}\" "C:\Temp\Reg\Classes_Root_{FB44DE85-4BF9-4F79-BBAD-F6AEE009F844}.reg"
+Reg export "HKCR\MimecastServicesForOutlook.AddinModule\" "C:\Temp\Reg\Classes_Root_MimecastServicesForOutlook.AddinModule.reg"
+Reg export "HKCU\Software\Microsoft\Office\Outlook\Addins\MimecastServicesForOutlook.AddinModule\" "C:\Temp\Reg\HKCU_MimecastServicesForOutlook.AddinModule.reg"
+Reg export "HKLM\Software\Microsoft\Office\Outlook\Addins\MimecastServicesForOutlook.AddinModule\" "C:\Temp\Reg\HKLM_MimecastServicesForOutlook.AddinModule.reg"
+
+# Delete RegFiles
+(Remove-Item -Verbose -Path "HKCR:\CLSID\{FB44DE85-4BF9-4F79-BBAD-F6AEE009F844}\" 4>&1).Message
+(Remove-Item -Verbose -Path "HKCR:\MimecastServicesForOutlook.AddinModule\" 4>&1).Message
+(Remove-Item -Verbose -Path "HKCU:\Software\Microsoft\Office\Outlook\Addins\MimecastServicesForOutlook.AddinModule\" 4>&1).Message
+(Remove-Item -Verbose -Path "HKLM:\Software\Microsoft\Office\Outlook\Addins\MimecastServicesForOutlook.AddinModule\" 4>&1).Message
