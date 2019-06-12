@@ -1,0 +1,35 @@
+If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
+{   
+#"No Administrative rights, it will display a popup window asking user for Admin rights"
+
+$arguments = "& '" + $myinvocation.mycommand.definition + "'"
+Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments
+
+break
+}
+
+#"No Administrative rights, it will display a popup window asking user for Admin rights"
+
+# Join to Domain
+if ((Get-WmiObject -Class Win32_ComputerSystem).PartOfDomain -eq $false) {
+# Add Machine to Domain and Rename Computer
+Write-Host 'Follow Build Sheet'
+# Domain Stuff
+$Computername = Read-Host 'Whats the Computer Name'
+$Computername > C:\Temp\Computername.txt
+$DomainToJoin = Read-Host 'Whats the Domain Name'
+$creds = Get-Credential
+
+Add-Computer -DomainName $DomainToJoin -NewName $Computername -Credential $creds
+Restart-Computer
+}
+
+# Check Hostname incase the Above fails
+    $Computername = Get-Content 'C:\Temp\Computername.txt'
+    $HM = HOSTNAME
+    if ($HM -like 'Desktop-*') {Rename-Computer -NewName $Computername}
+
+# Remove old Software
+Uninstall-Package 'Dell Digital Delivery Service'
+Uninstall-Package 'Dell SupportAssist'
+Uninstall-Package 'Dell Power Manager Service'
